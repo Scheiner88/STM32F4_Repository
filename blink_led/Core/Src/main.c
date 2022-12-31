@@ -33,9 +33,21 @@ int ClockInit(void)
 	}
 
 	//НАСТРОЙКА И ЗАПУСК PLL:
+	//Частота кварца HSE_VALUE = 25 MHz
+	//f_{PLL general clock output} = [(HSE_VALUE/PLLM)*PLLN]/PLLP
 
-	RCC->CFGR |= (0x07<<RCC_PLLCFGR_PLLN_Pos)      ////PLL множитель. Нужно заменить 0x07 на что-нибудь осмысленное (в документации говорят можно задавать 9ти битное число)
-		| (0x01<<RCC_PLLCFGR_PLLSRC_Pos);          //Тактирование PLL от HSE
+	//Устанавливаем PLLM = 25 <---> (01 1001)
+	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLM_0 | RCC_PLLCFGR_PLLM_3 | RCC_PLLCFGR_PLLM_4);
+	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM_1 | RCC_PLLCFGR_PLLM_2 | RCC_PLLCFGR_PLLM_5);
+
+	//Устанавливаем PLLN = 144 <---> (0 1001 0000)
+	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLN_4 | RCC_PLLCFGR_PLLN_7);
+	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLN_0 | RCC_PLLCFGR_PLLN_1 | RCC_PLLCFGR_PLLN_2 | RCC_PLLCFGR_PLLN_3 | RCC_PLLCFGR_PLLN_5 | RCC_PLLCFGR_PLLN_6 | RCC_PLLCFGR_PLLN_8);
+
+	//Устанавливаем PLLP = 2 <---> (00)
+	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLP_0 | RCC_PLLCFGR_PLLP_1);
+
+	RCC->PLLCFGR |= (1<<RCC_PLLCFGR_PLLSRC_Pos);   //Тактирование PLL от HSE
 
 	RCC->CR |= (1<<RCC_CR_PLLON_Pos);              //Запускаем PLL
 
@@ -53,24 +65,26 @@ int ClockInit(void)
 		}
 	}
 
-	/* НАСТРОЙКА FLASH И ДЕЛИТЕЛЕЙ (не готово):
+	// НАСТРОЙКА FLASH И ДЕЛИТЕЛЕЙ:
 
+	//Устанавливаем 2 цикла ожидания для Flash
 	FLASH->ACR |= (0x02<<FLASH_ACR_LATENCY_Pos);
 
-	RCC->CFGR |= (0x00<<RCC_CFGR_PPRE2_Pos)
-		| (0x04<<RCC_CFGR_PPRE1_Pos)
-		| (0x00<<RCC_CFGR_HPRE_Pos);
+	RCC->CFGR |= (0x00<<RCC_CFGR_PPRE2_Pos) //Делитель шины APB2 равен 1
+		| (0x04<<RCC_CFGR_PPRE1_Pos)        //Делитель шины APB1 равен 2
+		| (0x00<<RCC_CFGR_HPRE_Pos);        //Делитель AHB равен 1
 
 
-	RCC->CFGR |= (0x02<<RCC_CFGR_SW_Pos);
+	RCC->CFGR |= (0x02<<RCC_CFGR_SW_Pos);   //Переключаемся на работу от PLL
 
+	//Ждем, пока переключимся
 	while((RCC->CFGR & RCC_CFGR_SWS_Msk) != (0x02<<RCC_CFGR_SWS_Pos))
 	{
 
 	}
 
+	//После того, как переключились на внешний источник такирования отключаем внутренний RC-генератор (HSI) для экономии энергии
 	RCC->CR &= ~(1<<RCC_CR_HSION_Pos);
 
 	return 0;
-	*/
 }
