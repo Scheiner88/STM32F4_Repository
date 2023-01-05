@@ -1,7 +1,13 @@
+#include "main.h"
 #include "stm32f4xx.h"
+
+uint8_t tim2_count;
 
 int main(void)
 {
+	tim2_count = 0;
+	LL_TIM_EnableIT_UPDATE(TIM2);
+	LL_TIM_EnableCounter(TIM2);
 	while(1)
 	{
 
@@ -87,4 +93,43 @@ int ClockInit(void)
 	RCC->CR &= ~(1<<RCC_CR_HSION_Pos);
 
 	return 0;
+}
+
+static void MX_TIM6_Init(void)
+{
+	LL_TIM_InitTypeDef TIM_InitStruct = {0};
+
+	/* Peripheral clock enable */
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM6);
+
+	/* TIM6 interrupt Init */
+	NVIC_SetPriority(TIM6_DAC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+	NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
+	TIM_InitStruct.Prescaler = 21999;
+	TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+	TIM_InitStruct.Autoreload = 499;
+	LL_TIM_Init(TIM6, &TIM_InitStruct);
+	LL_TIM_DisableARRPreload(TIM6);
+	LL_TIM_SetTriggerOutput(TIM6, LL_TIM_TRGO_UPDATE);
+	LL_TIM_DisableMasterSlaveMode(TIM6);
+}
+
+void TIM6_Callback(void)
+{
+	if(LL_TIM_IsActiveFlag_UPDATE(TIM6))
+	{
+		LL_TIM_ClearFlag_UPDATE(TIM6);
+	    switch(tim2_count)
+	    {
+	      case 0:
+	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_13); break;
+	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14); break;
+	      case 1:
+	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14); break;
+	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_13); break;
+	    }
+		tim2_count++;
+		if(tim2_count>1) tim2_count=0;
+	}
 }
