@@ -47,12 +47,12 @@ int ClockInit(void)
 	}
 
 	//НАСТРОЙКА И ЗАПУСК PLL:
-	//Частота кварца HSE_VALUE = 25 MHz
+	//Частота кварца 8 MHz
 	//f_{PLL general clock output} = [(HSE_VALUE/PLLM)*PLLN]/PLLP
 
-	//Устанавливаем PLLM = 25 <---> (01 1001)
-	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLM_0 | RCC_PLLCFGR_PLLM_3 | RCC_PLLCFGR_PLLM_4);
-	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM_1 | RCC_PLLCFGR_PLLM_2 | RCC_PLLCFGR_PLLM_5);
+	//Устанавливаем PLLM = 8 <---> (00 1000)
+	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLM_3);
+	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM_1 | RCC_PLLCFGR_PLLM_2 | RCC_PLLCFGR_PLLM_5 | RCC_PLLCFGR_PLLM_0 | RCC_PLLCFGR_PLLM_4);
 
 	//Устанавливаем PLLN = 144 <---> (0 1001 0000)
 	RCC->PLLCFGR |= (RCC_PLLCFGR_PLLN_4 | RCC_PLLCFGR_PLLN_7);
@@ -114,9 +114,9 @@ static void TIM2_Init(void)
 	  NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
 	  NVIC_EnableIRQ(TIM2_IRQn);
 
-	  TIM_InitStruct.Prescaler = 199;
+	  TIM_InitStruct.Prescaler = 7200;
 	  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-	  TIM_InitStruct.Autoreload = 35999;
+	  TIM_InitStruct.Autoreload = 10000;
 	  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 	  LL_TIM_Init(TIM2, &TIM_InitStruct);
 	  LL_TIM_DisableARRPreload(TIM2);
@@ -153,11 +153,15 @@ void TIM2_Callback(void)
 	    switch(tim2_count)
 	    {
 	      case 0:
-	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_13); LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14); break;
+	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_13);
+	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
+	    	  break;
 	      case 1:
-	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14); LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_13); break;
+	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
+	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_13);
+	    	  break;
 	    }
 		tim2_count++;
-		if(tim2_count>1) tim2_count=0;
+		if(tim2_count>1) tim2_count = 0;
 	}
 }
