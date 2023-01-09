@@ -1,7 +1,7 @@
 #include "main.h"
 #include "stm32f4xx.h"
 
-uint8_t tim2_count;
+uint8_t flag = 0;
 
 int ClockInit(void);
 static void TIM2_Init(void);
@@ -13,13 +13,10 @@ int main(void)
 	TIM2_Init();
 	MX_GPIO_Init();
 
-	tim2_count = 0;
 	LL_TIM_EnableIT_UPDATE(TIM2);
 	LL_TIM_EnableCounter(TIM2);
-	while(1)
-	{
 
-	}
+	while(1){ }
 }
 
 int ClockInit(void)
@@ -34,16 +31,10 @@ int ClockInit(void)
 	for(StartUpCounter = 0; ; StartUpCounter++)
 	{
 		//Если успешно запустилось, то выходим из цикла
-		if(RCC->CR & (1<<RCC_CR_HSERDY_Pos))
-		{
-			break;
-		}
-		//Если не запустилось, то отключаем все, что включили и возвращаем ошибку
-		if(StartUpCounter > 0x1000)
-		{
-			RCC->CR &= ~(1<<RCC_CR_HSEON_Pos);
-			return 1;
-		}
+		if(RCC->CR & (1<<RCC_CR_HSERDY_Pos)) break;
+
+		//Если не запустилось, то отключаем все, что включили
+		if(StartUpCounter > 0x1000) RCC->CR &= ~(1<<RCC_CR_HSEON_Pos);
 	}
 
 	//НАСТРОЙКА И ЗАПУСК PLL:
@@ -68,14 +59,12 @@ int ClockInit(void)
 	//Ждем успешного запуска или окончания тайм-аута
 	for(StartUpCounter = 0; ; StartUpCounter++)
 	{
-		if(RCC->CR & (1<<RCC_CR_PLLRDY_Pos))
-			break;
+		if(RCC->CR & (1<<RCC_CR_PLLRDY_Pos)) break;
 
 		if(StartUpCounter > 0x1000)
 		{
 			RCC->CR &= ~(1<<RCC_CR_HSEON_Pos);
 			RCC->CR &= ~(1<<RCC_CR_PLLON_Pos);
-			return 2;
 		}
 	}
 
@@ -92,10 +81,7 @@ int ClockInit(void)
 	RCC->CFGR |= (0x02<<RCC_CFGR_SW_Pos);   //Переключаемся на работу от PLL
 
 	//Ждем, пока переключимся
-	while((RCC->CFGR & RCC_CFGR_SWS_Msk) != (0x02<<RCC_CFGR_SWS_Pos))
-	{
-
-	}
+	while((RCC->CFGR & RCC_CFGR_SWS_Msk) != (0x02<<RCC_CFGR_SWS_Pos)){ }
 
 	//После того, как переключились на внешний источник такирования отключаем внутренний RC-генератор (HSI) для экономии энергии
 	RCC->CR &= ~(1<<RCC_CR_HSION_Pos);
@@ -105,63 +91,77 @@ int ClockInit(void)
 
 static void TIM2_Init(void)
 {
-	  LL_TIM_InitTypeDef TIM_InitStruct = {0};
+	LL_TIM_InitTypeDef TIM_InitStruct = {0};
 
-	  /* Peripheral clock enable */
-	  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
+	/* Peripheral clock enable */
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
 
-	  /* TIM2 interrupt Init */
-	  NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-	  NVIC_EnableIRQ(TIM2_IRQn);
+	/* TIM2 interrupt Init */
+	NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+	NVIC_EnableIRQ(TIM2_IRQn);
 
-	  TIM_InitStruct.Prescaler = 7200;
-	  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-	  TIM_InitStruct.Autoreload = 10000;
-	  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-	  LL_TIM_Init(TIM2, &TIM_InitStruct);
-	  LL_TIM_DisableARRPreload(TIM2);
-	  LL_TIM_SetClockSource(TIM2, LL_TIM_CLOCKSOURCE_INTERNAL);
-	  LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
-	  LL_TIM_DisableMasterSlaveMode(TIM2);
+	TIM_InitStruct.Prescaler = 7200;
+	TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+	TIM_InitStruct.Autoreload = 10000;
+	TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+	LL_TIM_Init(TIM2, &TIM_InitStruct);
+	LL_TIM_DisableARRPreload(TIM2);
+	LL_TIM_SetClockSource(TIM2, LL_TIM_CLOCKSOURCE_INTERNAL);
+	LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
+	LL_TIM_DisableMasterSlaveMode(TIM2);
 }
 
 static void MX_GPIO_Init(void)
 {
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-  /* GPIO Ports Clock Enable */
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOH);
-  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOG);
+	/* GPIO Ports Clock Enable */
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOH);
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOG);
 
-  /**/
-  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_13|LL_GPIO_PIN_14);
+	/**/
+	LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
 
-  /**/
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_13|LL_GPIO_PIN_14;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+	/**/
+	GPIO_InitStruct.Pin = LL_GPIO_PIN_14;
+	GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+	LL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+}
+
+int is_flag(void)
+{
+	return(LL_TIM_IsActiveFlag_UPDATE(TIM2));
+}
+
+void clear_flag(void)
+{
+	LL_TIM_ClearFlag_UPDATE(TIM2);
 }
 
 void TIM2_Callback(void)
 {
-	if(LL_TIM_IsActiveFlag_UPDATE(TIM2))
+	if(is_flag())
 	{
-		LL_TIM_ClearFlag_UPDATE(TIM2);
-	    switch(tim2_count)
+		clear_flag();
+	    switch(flag)
 	    {
 	      case 0:
-	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_13);
-	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
+	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
+	    	  flag = 1;
 	    	  break;
 	      case 1:
-	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
-	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_13);
+	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
+	    	  flag = 0;
 	    	  break;
 	    }
-		tim2_count++;
-		if(tim2_count>1) tim2_count = 0;
 	}
+	if((flag != 0) && (flag != 1)) flag = 0;
+}
+
+void TIM2_IRQHandler(void)
+{
+	TIM2_Callback();
 }
