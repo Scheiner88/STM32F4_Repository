@@ -1,25 +1,22 @@
 #include "main.h"
 #include "stm32f4xx.h"
 
-uint8_t flag = 0;
+uint8_t flag = 0; //Создание переменной флаг
 
-int ClockInit(void);
+int Clock_Init(void);
 static void TIM2_Init(void);
-static void MX_GPIO_Init(void);
+static void GPIO_Init(void);
 
 int main(void)
 {
-	ClockInit();
+	Clock_Init();
 	TIM2_Init();
-	MX_GPIO_Init();
-
-	LL_TIM_EnableIT_UPDATE(TIM2);
-	LL_TIM_EnableCounter(TIM2);
+	GPIO_Init();
 
 	while(1){ }
 }
 
-int ClockInit(void)
+int Clock_Init(void)
 {
 	__IO int StartUpCounter;
 
@@ -91,27 +88,29 @@ int ClockInit(void)
 
 static void TIM2_Init(void)
 {
-	LL_TIM_InitTypeDef TIM_InitStruct = {0};
+	LL_TIM_InitTypeDef TIM_InitStruct = {0};   //Создание массива? с определёнными заранее переменными и их типами данных
 
-	/* Peripheral clock enable */
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2); //Включение таймера
 
-	/* TIM2 interrupt Init */
+	//Инициализация прерывания
 	NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
 	NVIC_EnableIRQ(TIM2_IRQn);
 
-	TIM_InitStruct.Prescaler = 7200;
-	TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-	TIM_InitStruct.Autoreload = 10000;
-	TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-	LL_TIM_Init(TIM2, &TIM_InitStruct);
-	LL_TIM_DisableARRPreload(TIM2);
-	LL_TIM_SetClockSource(TIM2, LL_TIM_CLOCKSOURCE_INTERNAL);
-	LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);
-	LL_TIM_DisableMasterSlaveMode(TIM2);
+	TIM_InitStruct.Prescaler = 7200;                          // Предделитель входной частоты (72 Мгц/Prescaler)
+	TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;       // Счёт вверх
+	TIM_InitStruct.Autoreload = 10000 - 1;                    // Количество тактов таймера до перезагрузки
+	TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1; // Дополнительный делитель для формирования дополнительного тактового сигнала
+	LL_TIM_Init(TIM2, &TIM_InitStruct);                       // Проверка настроек таймера
+	LL_TIM_DisableARRPreload(TIM2);                           // Отключение предварительной загрузки автоматической перезагрузки (ARR)
+	LL_TIM_SetClockSource(TIM2, LL_TIM_CLOCKSOURCE_INTERNAL); // Установка тактирования от внутреннего источника (шина APB1)
+	LL_TIM_SetTriggerOutput(TIM2, LL_TIM_TRGO_UPDATE);        // Событие обновления используется в качестве выходного сигнала триггера
+	LL_TIM_DisableMasterSlaveMode(TIM2);                      // Отключение режима Master/Slave.
+
+	LL_TIM_EnableIT_UPDATE(TIM2); // Включение прерывания по событию UPDATE
+	LL_TIM_EnableCounter(TIM2);   // Включение счётчика таймера
 }
 
-static void MX_GPIO_Init(void)
+static void GPIO_Init(void)
 {
 	LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
@@ -131,17 +130,17 @@ static void MX_GPIO_Init(void)
 	LL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 }
 
-int is_flag(void)
+int is_flag(void) // Функция, возвращающая значение флага по событию UPDATE
 {
 	return(LL_TIM_IsActiveFlag_UPDATE(TIM2));
 }
 
-void clear_flag(void)
+void clear_flag(void) // Функция очистки флага
 {
 	LL_TIM_ClearFlag_UPDATE(TIM2);
 }
 
-void TIM2_Callback(void)
+void TIM2_Callback(void) // Функция, вызываемая в случае прерывания
 {
 	if(is_flag())
 	{
