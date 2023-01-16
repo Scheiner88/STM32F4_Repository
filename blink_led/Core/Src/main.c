@@ -13,7 +13,17 @@ int main(void)
 	TIM2_Init();
 	GPIO_Init();
 
-	while(1){ }
+	while(1)
+	{
+		if(flag == 1)
+		{
+			LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
+		}
+		else if(flag == 0)
+		{
+			LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
+		}
+	}
 }
 
 int Clock_Init(void)
@@ -142,22 +152,18 @@ void clear_flag(void) // Функция очистки флага
 
 void TIM2_Callback(void) // Функция, вызываемая в случае прерывания
 {
-	if(is_flag())
+	clear_flag();
+	switch(flag)
 	{
-		clear_flag();
-	    switch(flag)
-	    {
-	      case 0:
-	    	  LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
-	    	  flag = 1;
-	    	  break;
-	      case 1:
-	    	  LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
-	    	  flag = 0;
-	    	  break;
-	    }
+		case 0:
+			flag = 1;
+			break;
+		case 1:
+			flag = 0;
+			break;
+		default:
+			flag = 0;
 	}
-	if((flag != 0) && (flag != 1)) flag = 0;
 }
 
 void TIM2_IRQHandler(void)
