@@ -1,11 +1,14 @@
 #include "main.h"
 #include "stm32f4xx.h"
 
-uint8_t flag = 0; //Создание переменной флаг
+uint8_t pps_flag = 0; //Создание переменной флаг
 
 int Clock_Init(void);
 static void TIM2_Init(void);
 static void GPIO_Init(void);
+
+void clear_pps_flag(void);
+int get_pps_flag(void);
 
 int main(void)
 {
@@ -15,13 +18,10 @@ int main(void)
 
 	while(1)
 	{
-		if(flag == 1)
+		if(get_pps_flag())
 		{
-			LL_GPIO_ResetOutputPin(GPIOG, LL_GPIO_PIN_14);
-		}
-		else if(flag == 0)
-		{
-			LL_GPIO_SetOutputPin(GPIOG, LL_GPIO_PIN_14);
+			LL_GPIO_TogglePin(GPIOG, LL_GPIO_PIN_14);
+			clear_pps_flag();
 		}
 	}
 }
@@ -140,30 +140,20 @@ static void GPIO_Init(void)
 	LL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 }
 
-int is_flag(void) // Функция, возвращающая значение флага по событию UPDATE
+int get_pps_flag(void) // Функция, возвращающая значение флага
 {
-	return(LL_TIM_IsActiveFlag_UPDATE(TIM2));
+	return(pps_flag);
 }
 
-void clear_flag(void) // Функция очистки флага
+void clear_pps_flag(void) // Функция очистки флага
 {
-	LL_TIM_ClearFlag_UPDATE(TIM2);
+	pps_flag = 0;
 }
 
 void TIM2_Callback(void) // Функция, вызываемая в случае прерывания
 {
-	clear_flag();
-	switch(flag)
-	{
-		case 0:
-			flag = 1;
-			break;
-		case 1:
-			flag = 0;
-			break;
-		default:
-			flag = 0;
-	}
+	LL_TIM_ClearFlag_UPDATE(TIM2);
+	pps_flag = 1;
 }
 
 void TIM2_IRQHandler(void)
