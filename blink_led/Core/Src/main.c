@@ -142,7 +142,7 @@ static void GPIO_Init(void)
 
 int get_pps_flag(void) // Функция, возвращающая значение флага
 {
-	return(pps_flag);
+	return pps_flag;
 }
 
 void clear_pps_flag(void) // Функция очистки флага
